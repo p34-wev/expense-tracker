@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin Login · Student MS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="login.css" />
+</head>
+<body>
+
+<div class="login-shell">
+
+  <aside class="login-hero">
+    <div class="hero-brand">
+      <div class="logo">SMS</div>
+      <div>
+        <h1>Student MS</h1>
+        <p>Management System</p>
+      </div>
+    </div>
+
+    <div class="hero-copy">
+      <h2>Manage every student<br />from one admin panel.</h2>
+      <p>Secure, fast and simple student records — built with Node.js, Express and MySQL.</p>
+      <ul>
+        <li>✔ Add, edit and delete students</li>
+        <li>✔ Track marks and average scores</li>
+        <li>✔ Search, filter and paginate records</li>
+      </ul>
+    </div>
+
+    <p class="hero-foot">© 2026 Student Management System</p>
+  </aside>
+
+  <main class="login-panel">
+    <div class="login-card">
+      <div class="lock-badge">🔒</div>
+      <h2>Admin Login</h2>
+      <p class="muted">Sign in to access the dashboard</p>
+
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="email">Email address</label>
+          <input type="email" id="email" name="email" autocomplete="username"
+                 placeholder="admin@example.com" required />
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="password-wrap">
+            <input type="password" id="password" name="password" autocomplete="current-password"
+                   placeholder="Enter your password" required />
+            <button type="button" class="toggle-password" id="togglePassword" aria-label="Show password">👁</button>
+          </div>
+        </div>
+
+        <div class="error-box" id="loginError" hidden></div>
+
+        <button type="submit" class="btn-login" id="loginBtn">Sign in</button>
+      </form>
+
+      <p class="login-foot">Protected admin area · Node.js · Express · MySQL</p>
+    </div>
+  </main>
+
+</div>
+
+<script src="login.js"></script>
+</body>
+</html>
