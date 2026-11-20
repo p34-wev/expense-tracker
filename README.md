@@ -70,6 +70,7 @@ DB_USER=root
 DB_PASSWORD=your_password
 DB_NAME=student_management
 SESSION_SECRET=a_long_random_string
+DB_SSL=false
 ```
 
 ### 4. Create the admin login
@@ -134,6 +135,31 @@ GET /api/students?search=priya&status=Active&page=1&limit=10
 
 These map to the existing `students` table. New records inherit `owner_user_id`
 from the first admin in the existing `users` table.
+
+## Deploy on Render
+
+This repo includes [`render.yaml`](render.yaml) for a one-click Render Blueprint.
+
+1. **Create a free MySQL database** (Render does not host MySQL):
+   [Aiven](https://aiven.io) → MySQL free plan, or [TiDB Cloud](https://tidbcloud.com) / [Railway](https://railway.app).
+   Import `db.sql` into it (MySQL Workbench, DBeaver or the provider's SQL console).
+2. On [Render](https://render.com) → **New → Blueprint** → connect this repo
+   (`p34-wev/student-management-system2`) → **Apply**.
+3. Fill the prompted environment variables:
+   - `DB_HOST`, `DB_USER`, `DB_PASSWORD` — from your MySQL provider
+   - `DB_NAME` — default `student_management`
+   - `DB_SSL` — set `true` if your provider requires TLS (Aiven/TiDB do)
+   `SESSION_SECRET` is generated automatically.
+4. Wait for the deploy, then open the Render URL — you should see the login page.
+5. **Create the admin account** (once):
+   ```powershell
+   $env:DB_HOST="your-db-host"; $env:DB_USER="avnadmin"; $env:DB_PASSWORD="..."; $env:DB_NAME="defaultdb"; $env:DB_SSL="true"
+   node seed-admin.js
+   ```
+   Then log in with `admin@sms.local` / `Admin@123` and change the password.
+
+`render.yaml` uses the free plan: the service sleeps after inactivity and cold-starts
+on the next request. Health check uses `/login.html` so it does not require a session.
 
 ## License
 
