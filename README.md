@@ -1,165 +1,254 @@
-# Student Management System
+# Expense Tracker
 
-A full-stack **Student Management System** built with **HTML, CSS, JavaScript, Node.js, Express and MySQL**. It supports complete **CRUD** (Create, Read, Update, Delete) operations with a modern dashboard UI.
+A full-stack **expense tracker** built with **HTML, CSS, vanilla JavaScript, Python (Flask) and MySQL**. It gives you a clean dashboard for daily spending, category insights, monthly budgets and complete expense CRUD.
 
 ## Features
 
-- 🔐 Admin login with session-based authentication (protected API + pages)
-- 📊 Dashboard with live stats (total students, active students, courses, average score)
-- ➕ Add new students
-- 📋 View / list students with search, course & status filters and pagination
-- ✏️ Edit existing students
-- 🗑️ Delete students with confirmation
-- 🧮 Mathematics / Science / English marks with per-student average score
-- ✅ Server-side validation and duplicate email handling
-- 📱 Responsive layout
+- 🔐 Account sign-in and registration with hashed passwords and server-side sessions
+- 📊 Overview dashboard with monthly totals, transaction count, average spend and budget progress
+- 📈 Daily spending chart and category breakdown (rendered with the Canvas API)
+- ➕ Add, edit and delete expenses
+- 🔎 Search expenses and filter by category, date range, sort order and pagination
+- 🗂️ Manage categories with custom names, colors and emoji icons
+- 🎯 Set a monthly budget and see spent / remaining / percentage used
+- 🕘 Six-month spending view and budget history
+- 📱 Responsive layout with a collapsible mobile sidebar
+- 🧾 Multi-user data isolation — every account only sees its own expenses
+- ✅ Server-side validation and parameterized SQL queries
 
 ## Tech Stack
 
-| Layer     | Technology          |
-|-----------|---------------------|
-| Frontend  | HTML5, CSS3, Vanilla JS |
-| Backend   | Node.js + Express   |
-| Database  | MySQL               |
+| Layer     | Technology |
+|-----------|------------|
+| Frontend  | HTML5, CSS3, vanilla JavaScript |
+| Backend   | Python 3 + Flask |
+| Database  | MySQL 8 (PyMySQL driver) |
+| Auth      | Flask sessions + Werkzeug password hashing |
 
 ## Project Structure
 
 ```
-├── server.js          # Express server + REST API + auth
-├── seed-admin.js      # Creates/resets the admin login account
-├── db.sql             # MySQL schema (idempotent)
-├── package.json
+├── app.py               # Flask app, REST API and page routes
+├── db.py                # MySQL connection helpers
+├── defaults.py          # Starter categories for new accounts
+├── init_db.py           # Creates the schema, admin account and demo data
+├── db.sql               # MySQL schema (safe to re-run)
+├── requirements.txt
 ├── .env.example
 └── public/
-    ├── index.html     # Dashboard UI (protected)
-    ├── style.css      # Dashboard styling
-    ├── app.js         # Frontend logic (fetch API)
-    ├── login.html     # Admin login page
-    ├── login.css      # Login page styling
-    └── login.js       # Login form logic
+    ├── index.html       # Dashboard app shell
+    ├── login.html       # Sign-in / registration page
+    ├── favicon.svg
+    ├── css/
+    │   ├── style.css
+    │   └── login.css
+    └── js/
+        ├── app.js
+        └── login.js
 ```
 
 ## Setup
 
-### 1. Install dependencies
+### 1. Prerequisites
+
+- Python 3.10 or newer
+- MySQL 8 running locally (or a hosted MySQL database)
+
+### 2. Create a virtual environment and install dependencies
+
+**Windows PowerShell**
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt
+```
+
+**macOS / Linux**
 
 ```bash
-npm install
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### 2. Create / verify the database
+### 3. Configure the environment
 
-The app uses your existing **`student_management`** database. To verify the schema
-(without deleting any existing rows):
+Copy `.env.example` to `.env` and fill in your MySQL credentials:
 
-```bash
-mysql -u root -p < db.sql
-```
+```env
+PORT=5000
+FLASK_DEBUG=false
+SESSION_SECRET=replace_with_a_long_random_string
 
-`db.sql` is idempotent: it only creates tables when they are missing.
-
-### 3. Configure environment
-
-Copy `.env.example` to `.env` and set your MySQL credentials:
-
-```
-PORT=3000
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=your_password
-DB_NAME=student_management
-SESSION_SECRET=a_long_random_string
+DB_NAME=expense_tracker
 DB_SSL=false
+
+ADMIN_NAME=Admin
+ADMIN_EMAIL=admin@spendly.local
+ADMIN_PASSWORD=Admin@123
+SEED_DEMO_DATA=false
+
+APP_NAME=Spendly
+CURRENCY_CODE=INR
+CURRENCY_LOCALE=en-IN
 ```
 
-### 4. Create the admin login
+| Variable | Purpose |
+|----------|---------|
+| `SESSION_SECRET` | Secret used to sign session cookies. Use a long random value. |
+| `DB_*` | MySQL connection details. `DB_NAME` defaults to `expense_tracker`. |
+| `DB_SSL` | Set `true` for hosted MySQL providers that require TLS. |
+| `DB_SSL_CA` | Optional path to a CA certificate for verified TLS. |
+| `ADMIN_*` | Account created by `init_db.py`. Change the password after first login. |
+| `SEED_DEMO_DATA` | Set `true` to insert sample expenses/budget for the admin account. |
+| `CURRENCY_CODE` / `CURRENCY_LOCALE` | Display currency, e.g. `USD` / `en-US`. |
+
+### 4. Create the database and admin account
 
 ```bash
-npm run seed:admin
+python init_db.py
 ```
 
-Default credentials (override with `ADMIN_EMAIL` / `ADMIN_PASSWORD` in `.env`):
+This script:
+
+1. Creates the `expense_tracker` database and tables from `db.sql`.
+2. Creates the admin account from your `.env` values (if it does not exist).
+3. Adds the nine starter categories.
+4. Optionally adds sample data when `SEED_DEMO_DATA=true`.
+
+The script is idempotent — it never drops existing data.
+
+Default admin credentials:
 
 ```
-Email:    admin@sms.local
+Email:    admin@spendly.local
 Password: Admin@123
 ```
 
-Change this password after your first login.
+Change the password after your first login, or set a different `ADMIN_PASSWORD` in `.env` before running `init_db.py`.
 
-### 5. Start the server
+### 5. Start the app
 
 ```bash
-npm start
+python app.py
 ```
 
-Open <http://localhost:3000> — you will be redirected to the login page.
+Open <http://localhost:5000>. You will be redirected to the sign-in page.
 
-## Authentication
-
-- Login: `POST /api/auth/login`
-- Session check: `GET /api/auth/me`
-- Logout: `POST /api/auth/logout`
-
-The session is stored in an httpOnly cookie (8-hour expiry). All student and
-stats endpoints return `401` without a valid admin session. Only users with the
-`admin` role can sign in. Both bcrypt and the existing `scrypt$...` hashes in the
-`users` table are supported.
+You can also create a new account from the sign-in page — each new account gets its own starter categories and private expense data.
 
 ## REST API
 
-| Method | Endpoint              | Description                     |
-|--------|-----------------------|---------------------------------|
-| GET    | `/api/students`       | List (search, filter, page)     |
-| GET    | `/api/students/:id`   | Get one student                 |
-| POST   | `/api/students`       | Create student                  |
-| PUT    | `/api/students/:id`   | Update student                  |
-| DELETE | `/api/students/:id`   | Delete student                  |
-| GET    | `/api/stats`          | Dashboard statistics            |
+All expense, category, budget and dashboard endpoints require a signed-in session.
 
-### Query params for `GET /api/students`
+### Auth
 
-`search`, `course`, `status`, `page`, `limit`
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/auth/login` | Sign in |
+| `POST` | `/api/auth/register` | Create an account |
+| `GET` | `/api/auth/me` | Current user |
+| `POST` | `/api/auth/logout` | Sign out |
 
-Example:
+### Expenses
 
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/expenses` | List with search, filters and pagination |
+| `GET` | `/api/expenses/:id` | Get one expense |
+| `POST` | `/api/expenses` | Create an expense |
+| `PUT` | `/api/expenses/:id` | Update an expense |
+| `DELETE` | `/api/expenses/:id` | Delete an expense |
+
+`GET /api/expenses` query parameters:
+
+`search`, `category_id`, `from`, `to`, `payment_method`, `sort`, `page`, `limit`
+
+Sort values: `date_desc`, `date_asc`, `amount_desc`, `amount_asc`, `title_asc`.
+
+### Categories
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/categories` | List categories with totals |
+| `POST` | `/api/categories` | Create a category |
+| `PUT` | `/api/categories/:id` | Update a category |
+| `DELETE` | `/api/categories/:id` | Delete an empty category |
+
+### Dashboard and budgets
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/dashboard?month=YYYY-MM` | Stats, daily chart, category breakdown, recent expenses |
+| `GET` | `/api/budgets` | Budget history with spending totals |
+| `PUT` | `/api/budget` | Create/update a monthly budget |
+| `GET` | `/api/health` | Database health check |
+
+### Example requests
+
+```bash
+# Sign in and keep the session cookie
+curl -c cookies.txt -X POST http://localhost:5000/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@spendly.local","password":"Admin@123"}'
+
+# Add an expense
+curl -b cookies.txt -X POST http://localhost:5000/api/expenses \
+  -H "Content-Type: application/json" \
+  -d '{"title":"Coffee","amount":180,"category_id":1,"expense_date":"2026-11-21","payment_method":"UPI"}'
+
+# Dashboard for a month
+curl -b cookies.txt "http://localhost:5000/api/dashboard?month=2026-11"
 ```
-GET /api/students?search=priya&status=Active&page=1&limit=10
+
+## Database Schema
+
+| Table | Purpose |
+|-------|---------|
+| `users` | Account name, email and password hash |
+| `categories` | Per-user categories with color and icon |
+| `expenses` | Amount, date, category, payment method and notes |
+| `budgets` | One monthly budget per user and month |
+
+The schema is in [`db.sql`](db.sql). Foreign keys cascade user data and prevent deleting a category that still has expenses.
+
+## Security Notes
+
+- Passwords are hashed with Werkzeug's `generate_password_hash`.
+- All SQL uses parameterized queries.
+- Session cookies are `HttpOnly` and `SameSite=Lax`. Set `SESSION_COOKIE_SECURE=true` behind HTTPS.
+- The app does not expose expense data without a valid session.
+- Use a long random `SESSION_SECRET` in production and replace the default admin password.
+
+## Troubleshooting
+
+**`The database is unavailable`**
+
+Check that MySQL is running, verify `DB_*` values in `.env`, and run `python init_db.py` again.
+
+**`Access denied for user`**
+
+Your MySQL username/password is incorrect or the user lacks permission to create the database. Create the database manually and grant access:
+
+```sql
+CREATE DATABASE expense_tracker CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+GRANT ALL PRIVILEGES ON expense_tracker.* TO 'your_user'@'localhost';
 ```
 
-### Student fields
+Then run `python init_db.py`.
 
-`full_name`, `email`, `phone`, `course`, `enrollment_date`, `status`,
-`mathematics_marks`, `science_marks`, `english_marks`
+**Port 5000 is already in use**
 
-These map to the existing `students` table. New records inherit `owner_user_id`
-from the first admin in the existing `users` table.
+Change `PORT` in `.env`, or run:
 
-## Deploy on Render
-
-This repo includes [`render.yaml`](render.yaml) for a one-click Render Blueprint.
-
-1. **Create a free MySQL database** (Render does not host MySQL):
-   [Aiven](https://aiven.io) → MySQL free plan, or [TiDB Cloud](https://tidbcloud.com) / [Railway](https://railway.app).
-   Import `db.sql` into it (MySQL Workbench, DBeaver or the provider's SQL console).
-2. On [Render](https://render.com) → **New → Blueprint** → connect this repo
-   (`p34-wev/student-management-system2`) → **Apply**.
-3. Fill the prompted environment variables:
-   - `DB_HOST`, `DB_USER`, `DB_PASSWORD` — from your MySQL provider
-   - `DB_NAME` — default `student_management`
-   - `DB_SSL` — set `true` if your provider requires TLS (Aiven/TiDB do)
-   `SESSION_SECRET` is generated automatically.
-4. Wait for the deploy, then open the Render URL — you should see the login page.
-5. **Create the admin account** (once):
-   ```powershell
-   $env:DB_HOST="your-db-host"; $env:DB_USER="avnadmin"; $env:DB_PASSWORD="..."; $env:DB_NAME="defaultdb"; $env:DB_SSL="true"
-   node seed-admin.js
-   ```
-   Then log in with `admin@sms.local` / `Admin@123` and change the password.
-
-`render.yaml` uses the free plan: the service sleeps after inactivity and cold-starts
-on the next request. Health check uses `/login.html` so it does not require a session.
+```bash
+python -c "from app import app; app.run(port=5001)"
+```
 
 ## License
 

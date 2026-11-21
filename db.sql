@@ -1,37 +1,62 @@
--- Student Management System - schema for the EXISTING database.
--- Safe to re-run: it only creates tables when missing and never drops data.
-CREATE DATABASE IF NOT EXISTS student_management
+-- Spendly expense tracker schema.
+-- Safe to run more than once: it only creates missing objects.
+CREATE DATABASE IF NOT EXISTS expense_tracker
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-USE student_management;
+USE expense_tracker;
 
 CREATE TABLE IF NOT EXISTS users (
   id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name          VARCHAR(80) NOT NULL,
   email         VARCHAR(254) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
-  role          ENUM('admin','user') NOT NULL DEFAULT 'user',
   created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_users_email (email)
 ) ENGINE=InnoDB;
 
-CREATE TABLE IF NOT EXISTS students (
-  id                     INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  owner_user_id          INT UNSIGNED DEFAULT NULL,
-  full_name              VARCHAR(120) NOT NULL,
-  email                  VARCHAR(254) NOT NULL,
-  phone                  VARCHAR(30)  DEFAULT NULL,
-  course                 VARCHAR(120) NOT NULL,
-  enrollment_date        DATE NOT NULL,
-  status                 ENUM('Active','Inactive') NOT NULL DEFAULT 'Active',
-  aadhaar_demo_completed TINYINT(1) NOT NULL DEFAULT 0,
-  created_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  mathematics_marks      DECIMAL(5,2) DEFAULT NULL,
-  science_marks          DECIMAL(5,2) DEFAULT NULL,
-  english_marks          DECIMAL(5,2) DEFAULT NULL,
-  UNIQUE KEY uq_students_owner_email (owner_user_id, email),
-  KEY idx_students_name (full_name),
-  KEY idx_students_course (course),
-  KEY idx_students_status (status),
-  CONSTRAINT fk_students_owner FOREIGN KEY (owner_user_id) REFERENCES users (id)
+CREATE TABLE IF NOT EXISTS categories (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id    INT UNSIGNED NOT NULL,
+  name       VARCHAR(80) NOT NULL,
+  color      CHAR(7) NOT NULL DEFAULT '#64748b',
+  icon       VARCHAR(16) NOT NULL DEFAULT '📦',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_categories_user_name (user_id, name),
+  KEY idx_categories_user (user_id),
+  CONSTRAINT fk_categories_user FOREIGN KEY (user_id)
+    REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS expenses (
+  id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id        INT UNSIGNED NOT NULL,
+  category_id    INT UNSIGNED NOT NULL,
+  title          VARCHAR(160) NOT NULL,
+  amount         DECIMAL(12,2) NOT NULL,
+  expense_date   DATE NOT NULL,
+  payment_method ENUM('Cash','Card','UPI','Bank Transfer','Other')
+                 NOT NULL DEFAULT 'Cash',
+  notes          TEXT NULL,
+  created_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                 ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_expenses_user_date (user_id, expense_date),
+  KEY idx_expenses_category (category_id),
+  CONSTRAINT fk_expenses_user FOREIGN KEY (user_id)
+    REFERENCES users (id) ON DELETE CASCADE,
+  CONSTRAINT fk_expenses_category FOREIGN KEY (category_id)
+    REFERENCES categories (id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS budgets (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id    INT UNSIGNED NOT NULL,
+  month      CHAR(7) NOT NULL,
+  amount     DECIMAL(12,2) NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+             ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_budgets_user_month (user_id, month),
+  CONSTRAINT fk_budgets_user FOREIGN KEY (user_id)
+    REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

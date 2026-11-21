@@ -1,27 +1,43 @@
 services:
   - type: web
-    name: student-management-system
-    runtime: node
+    name: expense-tracker
+    env: python
+    region: frankfurt
     plan: free
-    region: singapore
-    buildCommand: npm install
-    startCommand: npm start
-    healthCheckPath: /login.html
-    autoDeploy: true
+    buildCommand: "pip install -r requirements.txt && python init_db.py"
+    startCommand: "python app.py"
     envVars:
-      - key: NODE_VERSION
-        value: "22"
+      - key: PORT
+        value: 10000
+      - key: FLASK_DEBUG
+        value: false
+      - key: SESSION_SECRET
+        generateValue: true
       - key: DB_HOST
         sync: false
       - key: DB_PORT
-        value: "3306"
+        value: 3306
       - key: DB_USER
         sync: false
       - key: DB_PASSWORD
         sync: false
       - key: DB_NAME
-        value: student_management
+        value: expense_tracker
       - key: DB_SSL
-        value: "false"
-      - key: SESSION_SECRET
-        generateValue: true
+        value: true
+      - key: DB_SSL_CA
+        sync: false
+      - key: ADMIN_NAME
+        value: Admin
+      - key: ADMIN_EMAIL
+        value: admin@spendly.local
+      - key: ADMIN_PASSWORD
+        value: Admin@123
+      - key: SEED_DEMO_DATA
+        value: false
+      - key: APP_NAME
+        value: Expense Tracker
+      - key: CURRENCY_CODE
+        value: INR
+      - key: CURRENCY_LOCALE
+        value: en-IN

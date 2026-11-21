@@ -1,4 +1,6 @@
-node_modules/
+.venv/
+__pycache__/
+*.py[cod]
 .env
-npm-debug.log*
 *.log
+node_modules/

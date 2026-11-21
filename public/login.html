@@ -1,72 +1,124 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Admin Login · Student MS</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="login.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="description" content="Sign in to Expense Tracker to track expenses and manage monthly budgets.">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <title>Sign in — Expense Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/login.css">
 </head>
 <body>
-
-<div class="login-shell">
-
-  <aside class="login-hero">
-    <div class="hero-brand">
-      <div class="logo">SMS</div>
-      <div>
-        <h1>Student MS</h1>
-        <p>Management System</p>
+  <main class="auth-shell">
+    <section class="auth-brand" aria-label="Spendly introduction">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H18a2 2 0 0 1 2 2v1.5M4 8.5V18a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-3.5m-16-7V17a3 3 0 0 0 3 3h11.5M21 10.5v4h-3.5a2 2 0 0 1 0-4H21Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span class="brand-copy"><strong>Expense Tracker</strong><small>Personal expense manager</small></span>
       </div>
-    </div>
 
-    <div class="hero-copy">
-      <h2>Manage every student<br />from one admin panel.</h2>
-      <p>Secure, fast and simple student records — built with Node.js, Express and MySQL.</p>
-      <ul>
-        <li>✔ Add, edit and delete students</li>
-        <li>✔ Track marks and average scores</li>
-        <li>✔ Search, filter and paginate records</li>
-      </ul>
-    </div>
+      <div class="brand-content">
+        <span class="eyebrow">Your money, made clear</span>
+        <h1>Know where every rupee goes.</h1>
+        <p>Track daily spending, build smarter budgets and see the full picture — all in one calm, simple dashboard.</p>
 
-    <p class="hero-foot">© 2026 Student Management System</p>
-  </aside>
-
-  <main class="login-panel">
-    <div class="login-card">
-      <div class="lock-badge">🔒</div>
-      <h2>Admin Login</h2>
-      <p class="muted">Sign in to access the dashboard</p>
-
-      <form id="loginForm" novalidate>
-        <div class="field">
-          <label for="email">Email address</label>
-          <input type="email" id="email" name="email" autocomplete="username"
-                 placeholder="admin@example.com" required />
-        </div>
-
-        <div class="field">
-          <label for="password">Password</label>
-          <div class="password-wrap">
-            <input type="password" id="password" name="password" autocomplete="current-password"
-                   placeholder="Enter your password" required />
-            <button type="button" class="toggle-password" id="togglePassword" aria-label="Show password">👁</button>
+        <div class="feature-list">
+          <div class="feature">
+            <span class="feature-icon">✦</span>
+            <div><strong>Simple expense logging</strong><small>Capture a purchase in seconds.</small></div>
+          </div>
+          <div class="feature">
+            <span class="feature-icon">◔</span>
+            <div><strong>Monthly budgets</strong><small>See progress before you overspend.</small></div>
+          </div>
+          <div class="feature">
+            <span class="feature-icon">⌁</span>
+            <div><strong>Useful insights</strong><small>Spot trends by category and month.</small></div>
           </div>
         </div>
+      </div>
 
-        <div class="error-box" id="loginError" hidden></div>
+      <div class="brand-art" aria-hidden="true">
+        <div class="art-card art-card-main">
+          <span class="art-label">This month</span>
+          <strong>₹ 24,680</strong>
+          <div class="art-bars"><span style="height:38%"></span><span style="height:58%"></span><span style="height:45%"></span><span style="height:76%"></span><span style="height:62%"></span><span style="height:92%"></span><span style="height:70%"></span></div>
+          <div class="art-foot"><span>Spent</span><span class="art-pill">↓ 8.4%</span></div>
+        </div>
+        <div class="art-card art-card-small">
+          <span class="art-dot"></span>
+          <div><small>Food &amp; dining</small><strong>₹ 6,240</strong></div>
+        </div>
+      </div>
 
-        <button type="submit" class="btn-login" id="loginBtn">Sign in</button>
-      </form>
+      <p class="brand-foot">A focused expense tracker built with Flask, MySQL and vanilla JavaScript.</p>
+    </section>
 
-      <p class="login-foot">Protected admin area · Node.js · Express · MySQL</p>
-    </div>
+    <section class="auth-panel">
+      <div class="auth-card">
+        <div class="auth-head">
+          <span class="auth-badge" id="authBadge">Welcome back</span>
+          <h2 id="authTitle">Sign in to Spendly</h2>
+          <p id="authSubtitle">Enter your details to open your dashboard.</p>
+        </div>
+
+        <form id="loginForm" class="auth-form" novalidate>
+          <label>Email address
+            <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email" required>
+          </label>
+          <label>Password
+            <span class="password-field">
+              <input type="password" id="loginPassword" placeholder="Your password" autocomplete="current-password" required>
+              <button type="button" class="reveal" data-reveal="loginPassword" aria-label="Show password">Show</button>
+            </span>
+          </label>
+          <p class="form-error" id="loginError" role="alert"></p>
+          <button class="btn btn-primary btn-block" type="submit" id="loginSubmit">Sign in</button>
+        </form>
+
+        <form id="registerForm" class="auth-form" novalidate hidden>
+          <label>Full name
+            <input type="text" id="registerName" placeholder="Your name" autocomplete="name" required>
+          </label>
+          <label>Email address
+            <input type="email" id="registerEmail" placeholder="you@example.com" autocomplete="email" required>
+          </label>
+          <label>Password
+            <span class="password-field">
+              <input type="password" id="registerPassword" placeholder="At least 8 characters" autocomplete="new-password" required>
+              <button type="button" class="reveal" data-reveal="registerPassword" aria-label="Show password">Show</button>
+            </span>
+          </label>
+          <label>Confirm password
+            <span class="password-field">
+              <input type="password" id="registerConfirm" placeholder="Repeat your password" autocomplete="new-password" required>
+              <button type="button" class="reveal" data-reveal="registerConfirm" aria-label="Show password">Show</button>
+            </span>
+          </label>
+          <p class="form-error" id="registerError" role="alert"></p>
+          <button class="btn btn-primary btn-block" type="submit" id="registerSubmit">Create account</button>
+        </form>
+
+        <p class="auth-switch" id="authSwitch">
+          New to Spendly? <button type="button" id="showRegister">Create an account</button>
+        </p>
+        <p class="auth-switch" id="authSwitchBack" hidden>
+          Already have an account? <button type="button" id="showLogin">Sign in</button>
+        </p>
+
+        <p class="auth-secure">
+          <span aria-hidden="true">🔒</span> Your data stays in your own MySQL database.
+        </p>
+      </div>
+    </section>
   </main>
 
-</div>
-
-<script src="login.js"></script>
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+  <script src="/static/js/login.js"></script>
 </body>
 </html>
