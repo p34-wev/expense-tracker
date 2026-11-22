@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import ssl
 from pathlib import Path
 
 import pymysql
@@ -27,14 +28,16 @@ def db_settings() -> dict:
     }
 
     if os.getenv("DB_SSL", "false").strip().lower() == "true":
-        # Managed MySQL providers often use certificates that cannot be
-        # verified from the application host. TLS is still used, but hostname
-        # verification is disabled unless a CA file is supplied.
-        ssl_options: dict = {"check_hostname": False}
+        # Managed MySQL providers (Aiven, TiDB, Railway) require TLS.
+        # Use a proper SSL context with hostname verification disabled
+        # unless a CA file is supplied.
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
         ca_file = os.getenv("DB_SSL_CA", "").strip()
         if ca_file:
-            ssl_options["ca"] = ca_file
-        settings["ssl"] = ssl_options
+            ctx.load_verify_locations(ca_file)
+        settings["ssl"] = ctx
 
     return settings
 
