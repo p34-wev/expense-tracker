@@ -998,6 +998,73 @@ def handle_server_error(_error):
     return "Unexpected server error.", 500
 
 
+# ---------------------------------------------------------------------------
+# Auto-initialize database on startup (for Render free plan without Shell)
+# ---------------------------------------------------------------------------
+
+
+def init_database_on_startup():
+    """Create database, tables, admin account and default categories if missing."""
+    from pymysql.constants import CLIENT
+
+    # Read schema
+    sql_path = BASE_DIR / "db.sql"
+    sql = sql_path.read_text(encoding="utf-8")
+
+    # Create database and tables (no database selected yet)
+    conn = connect(include_database=False, client_flag=CLIENT.MULTI_STATEMENTS)
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(sql)
+            while cursor.nextset():
+                pass
+        conn.commit()
+    finally:
+        conn.close()
+
+    # Ensure admin user and default categories
+    conn = connect()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute("SHOW TABLES LIKE 'users'")
+            if not cursor.fetchone():
+                return  # Tables not created yet
+
+            admin_email = os.getenv("ADMIN_EMAIL", "admin@spendly.local").strip().lower()
+            admin_name = os.getenv("ADMIN_NAME", "Admin").strip() or "Admin"
+            admin_password = os.getenv("ADMIN_PASSWORD", "Admin@123")
+
+            cursor.execute("SELECT id FROM users WHERE email = %s", (admin_email,))
+            row = cursor.fetchone()
+            if not row:
+                cursor.execute(
+                    "INSERT INTO users (name, email, password_hash) VALUES (%s, %s, %s)",
+                    (admin_name, admin_email, generate_password_hash(admin_password)),
+                )
+                user_id = cursor.lastrowid
+                print(f"Created admin account: {admin_email}")
+            else:
+                user_id = row["id"]
+                print(f"Admin account already exists: {admin_email}")
+
+            # Seed default categories if empty
+            cursor.execute(
+                "SELECT COUNT(*) AS count FROM categories WHERE user_id = %s",
+                (user_id,),
+            )
+            if cursor.fetchone()["count"] == 0:
+                seed_default_categories(cursor, user_id)
+                print("Added starter categories.")
+
+        conn.commit()
+    finally:
+        conn.close()
+
+
+# Run init on every startup (idempotent — safe to repeat)
+init_database_on_startup()
+
+
 if __name__ == "__main__":
     port = int(os.getenv("PORT", "5000"))
     debug = os.getenv("FLASK_DEBUG", "false").lower() == "true"
