@@ -1,4 +1,4 @@
-"""Spendly — a Flask + MySQL expense tracker."""
+"""Spendly — a Flask + SQLite expense tracker."""
 
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from functools import wraps
 from pathlib import Path
 
-import pymysql
 from flask import (
     Flask,
     g,
@@ -23,8 +22,8 @@ from flask import (
 from flask.json.provider import DefaultJSONProvider
 from werkzeug.security import check_password_hash, generate_password_hash
 
-from db import BASE_DIR, connect
-from defaults import seed_default_categories
+from db import BASE_DIR, connect, execute, fetch_all, fetch_one, get_db
+from defaults import DEFAULT_CATEGORIES, seed_default_categories
 
 PUBLIC_DIR = BASE_DIR / "public"
 PAYMENT_METHODS = ("Cash", "Card", "UPI", "Bank Transfer", "Other")
@@ -34,7 +33,7 @@ MONTH_RE = re.compile(r"^\d{4}-\d{2}$")
 
 
 class ExpenseJSONProvider(DefaultJSONProvider):
-    """Teach Flask's JSON encoder about MySQL decimals and dates."""
+    """Teach Flask's JSON encoder about SQLite decimals and dates."""
 
     def default(self, obj):
         if isinstance(obj, Decimal):
@@ -58,33 +57,23 @@ app.config.update(
 
 
 # ---------------------------------------------------------------------------
-# Database helpers
+# Database helpers (SQLite wrappers around db.py)
 # ---------------------------------------------------------------------------
 
 
-def get_db():
-    if "db" not in g:
-        g.db = connect()
-    return g.db
+def fetch_row(sql: str, params=()):
+    """Wrapper around db.fetch_one for consistency."""
+    return fetch_one(sql, params)
 
 
-@app.teardown_appcontext
-def close_db(_error=None):
-    db = g.pop("db", None)
-    if db is not None:
-        db.close()
+def fetch_rows(sql: str, params=()):
+    """Wrapper around db.fetch_all for consistency."""
+    return fetch_all(sql, params)
 
 
-def fetch_one(sql: str, params=()):
-    with get_db().cursor() as cursor:
-        cursor.execute(sql, params)
-        return cursor.fetchone()
-
-
-def fetch_all(sql: str, params=()):
-    with get_db().cursor() as cursor:
-        cursor.execute(sql, params)
-        return cursor.fetchall()
+def run_execute(sql: str, params=()):
+    """Wrapper around db.execute for consistency."""
+    return execute(sql, params)
 
 
 # ---------------------------------------------------------------------------
@@ -166,7 +155,10 @@ def parse_int(value, label: str = "Value") -> int:
 def month_bounds(month: str):
     year, month_number = (int(part) for part in month.split("-"))
     start = date(year, month_number, 1)
-    end = date(year + (month_number == 12), 1 if month_number == 12 else month_number + 1, 1)
+    if month_number == 12:
+        end = date(year + 1, 1, 1)
+    else:
+        end = date(year, month_number + 1, 1)
     if month_number == 1:
         previous_start = date(year - 1, 12, 1)
     else:
@@ -186,7 +178,7 @@ def user_payload(row) -> dict:
 
 def category_belongs_to_user(category_id, user_id: int) -> bool:
     row = fetch_one(
-        "SELECT id FROM categories WHERE id = %s AND user_id = %s",
+        "SELECT id FROM categories WHERE id = ? AND user_id = ?",
         (category_id, user_id),
     )
     return bool(row)
@@ -205,7 +197,7 @@ def expense_select() -> str:
 
 def get_expense(expense_id: int, user_id: int):
     return fetch_one(
-        expense_select() + " WHERE e.id = %s AND e.user_id = %s",
+        expense_select() + " WHERE e.id = ? AND e.user_id = ?",
         (expense_id, user_id),
     )
 
@@ -225,11 +217,14 @@ def login():
         return api_error("Email and password are required.")
 
     row = fetch_one(
-        "SELECT id, name, email, password_hash FROM users WHERE email = %s",
+        "SELECT id, name, email, password_hash FROM users WHERE email = ?",
         (email,),
     )
     if not row or not check_password_hash(row["password_hash"], password):
         return api_error("Invalid email or password.", 401)
+
+    if row["role"] != "admin":
+        return api_error("Admin access only", 403)
 
     session.clear()
     session.permanent = True
@@ -260,22 +255,21 @@ def register():
         return api_error(" ".join(errors))
 
     password_hash = generate_password_hash(password)
-    db = get_db()
+    conn = get_db()
     try:
-        with db.cursor() as cursor:
+        with conn.cursor() as cursor:
             cursor.execute(
-                "INSERT INTO users (name, email, password_hash) VALUES (%s, %s, %s)",
+                "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
                 (name, email, password_hash),
             )
             user_id = cursor.lastrowid
             seed_default_categories(cursor, user_id)
-        db.commit()
-    except pymysql.err.IntegrityError:
-        db.rollback()
-        return api_error("An account with this email already exists.", 409)
+        conn.commit()
     except Exception:
-        db.rollback()
+        conn.rollback()
         raise
+    finally:
+        conn.close()
 
     session.clear()
     session.permanent = True
@@ -288,7 +282,7 @@ def me():
     user_id = session.get("user_id")
     if not user_id:
         return api_error("Not authenticated.", 401)
-    row = fetch_one("SELECT id, name, email FROM users WHERE id = %s", (user_id,))
+    row = fetch_one("SELECT id, name, email FROM users WHERE id = ?", (user_id,))
     if not row:
         session.clear()
         return api_error("Not authenticated.", 401)
@@ -321,7 +315,7 @@ def public_config():
 def health():
     try:
         fetch_one("SELECT 1 AS ok")
-    except pymysql.MySQLError:
+    except Exception:
         return jsonify({"status": "error", "database": "unavailable"}), 503
     return jsonify({"status": "ok", "database": "connected"})
 
@@ -341,7 +335,7 @@ def list_categories():
                COUNT(e.id) AS expense_count
         FROM categories c
         LEFT JOIN expenses e ON e.category_id = c.id AND e.user_id = c.user_id
-        WHERE c.user_id = %s
+        WHERE c.user_id = ?
         GROUP BY c.id, c.name, c.color, c.icon
         ORDER BY c.name ASC
         """,
@@ -363,29 +357,28 @@ def create_category():
     if not COLOR_RE.fullmatch(color):
         return api_error("Choose a valid category color.")
 
-    db = get_db()
+    conn = get_db()
     try:
-        with db.cursor() as cursor:
+        with conn.cursor() as cursor:
             cursor.execute(
                 """
                 INSERT INTO categories (user_id, name, color, icon)
-                VALUES (%s, %s, %s, %s)
+                VALUES (?, ?, ?, ?)
                 """,
                 (session["user_id"], name, color, icon),
             )
             category_id = cursor.lastrowid
-        db.commit()
-    except pymysql.err.IntegrityError:
-        db.rollback()
-        return api_error("A category with that name already exists.", 409)
+        conn.commit()
     except Exception:
-        db.rollback()
-        raise
+        conn.rollback()
+        return api_error("A category with that name already exists.", 409)
+    finally:
+        conn.close()
 
     row = fetch_one(
         """
         SELECT id, name, color, icon, 0 AS total_spent, 0 AS expense_count
-        FROM categories WHERE id = %s
+        FROM categories WHERE id = ?
         """,
         (category_id,),
     )
@@ -397,7 +390,7 @@ def create_category():
 def update_category(category_id: int):
     payload = json_body()
     existing = fetch_one(
-        "SELECT id FROM categories WHERE id = %s AND user_id = %s",
+        "SELECT id FROM categories WHERE id = ? AND user_id = ?",
         (category_id, session["user_id"]),
     )
     if not existing:
@@ -411,23 +404,22 @@ def update_category(category_id: int):
     if not COLOR_RE.fullmatch(color):
         return api_error("Choose a valid category color.")
 
-    db = get_db()
+    conn = get_db()
     try:
-        with db.cursor() as cursor:
+        with conn.cursor() as cursor:
             cursor.execute(
                 """
-                UPDATE categories SET name = %s, color = %s, icon = %s
-                WHERE id = %s AND user_id = %s
+                UPDATE categories SET name = ?, color = ?, icon = ?
+                WHERE id = ? AND user_id = ?
                 """,
                 (name, color, icon, category_id, session["user_id"]),
             )
-        db.commit()
-    except pymysql.err.IntegrityError:
-        db.rollback()
-        return api_error("A category with that name already exists.", 409)
+        conn.commit()
     except Exception:
-        db.rollback()
-        raise
+        conn.rollback()
+        return api_error("A category with that name already exists.", 409)
+    finally:
+        conn.close()
 
     row = fetch_one(
         """
@@ -436,7 +428,7 @@ def update_category(category_id: int):
                COUNT(e.id) AS expense_count
         FROM categories c
         LEFT JOIN expenses e ON e.category_id = c.id AND e.user_id = c.user_id
-        WHERE c.id = %s AND c.user_id = %s
+        WHERE c.id = ? AND c.user_id = ?
         GROUP BY c.id, c.name, c.color, c.icon
         """,
         (category_id, session["user_id"]),
@@ -448,14 +440,14 @@ def update_category(category_id: int):
 @login_required
 def delete_category(category_id: int):
     existing = fetch_one(
-        "SELECT id FROM categories WHERE id = %s AND user_id = %s",
+        "SELECT id FROM categories WHERE id = ? AND user_id = ?",
         (category_id, session["user_id"]),
     )
     if not existing:
         return api_error("Category not found.", 404)
 
     used = fetch_one(
-        "SELECT COUNT(*) AS count FROM expenses WHERE category_id = %s AND user_id = %s",
+        "SELECT COUNT(*) AS count FROM expenses WHERE category_id = ? AND user_id = ?",
         (category_id, session["user_id"]),
     )
     if used["count"]:
@@ -463,13 +455,14 @@ def delete_category(category_id: int):
             "This category has expenses. Move or delete those expenses first.", 409
         )
 
-    db = get_db()
-    with db.cursor() as cursor:
+    conn = get_db()
+    with conn.cursor() as cursor:
         cursor.execute(
-            "DELETE FROM categories WHERE id = %s AND user_id = %s",
+            "DELETE FROM categories WHERE id = ? AND user_id = ?",
             (category_id, session["user_id"]),
         )
-    db.commit()
+    conn.commit()
+    conn.close()
     return jsonify({"message": "Category deleted."})
 
 
@@ -499,17 +492,17 @@ def list_expenses():
     payment_method = request.args.get("payment_method", "").strip()
     sort = request.args.get("sort", "date_desc").strip()
 
-    where = ["e.user_id = %s"]
+    where = ["e.user_id = ?"]
     params: list = [user_id]
 
     if search:
         like = f"%{search}%"
-        where.append("(e.title LIKE %s OR e.notes LIKE %s)")
+        where.append("(e.title LIKE ? OR e.notes LIKE ?)")
         params.extend([like, like])
 
     if category_id:
         try:
-            where.append("e.category_id = %s")
+            where.append("e.category_id = ?")
             params.append(parse_int(category_id, "Category"))
         except ValueError as exc:
             return api_error(str(exc))
@@ -517,21 +510,21 @@ def list_expenses():
     if date_from:
         try:
             params.append(parse_date(date_from, "From date"))
-            where.append("e.expense_date >= %s")
+            where.append("e.expense_date >= ?")
         except ValueError as exc:
             return api_error(str(exc))
 
     if date_to:
         try:
             params.append(parse_date(date_to, "To date"))
-            where.append("e.expense_date <= %s")
+            where.append("e.expense_date <= ?")
         except ValueError as exc:
             return api_error(str(exc))
 
     if payment_method:
         if payment_method not in PAYMENT_METHODS:
             return api_error("Invalid payment method.")
-        where.append("e.payment_method = %s")
+        where.append("e.payment_method = ?")
         params.append(payment_method)
 
     where_sql = " AND ".join(where)
@@ -557,7 +550,7 @@ def list_expenses():
         + f"""
         WHERE {where_sql}
         ORDER BY {sort_sql}
-        LIMIT %s OFFSET %s
+        LIMIT ? OFFSET ?
         """,
         tuple(params + [limit, offset]),
     )
@@ -639,26 +632,27 @@ def create_expense():
     if not category_belongs_to_user(data["category_id"], session["user_id"]):
         return api_error("Choose a valid category.", 404)
 
-    db = get_db()
-    with db.cursor() as cursor:
+    conn = get_db()
+    with conn.cursor() as cursor:
         cursor.execute(
             """
             INSERT INTO expenses
               (user_id, category_id, title, amount, expense_date, payment_method, notes)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 session["user_id"],
                 data["category_id"],
                 data["title"],
-                data["amount"],
+                float(data["amount"]),
                 data["expense_date"],
                 data["payment_method"],
                 data["notes"] or None,
             ),
         )
         expense_id = cursor.lastrowid
-    db.commit()
+    conn.commit()
+    conn.close()
 
     return jsonify(get_expense(expense_id, session["user_id"])), 201
 
@@ -676,19 +670,19 @@ def update_expense(expense_id: int):
     if not category_belongs_to_user(data["category_id"], session["user_id"]):
         return api_error("Choose a valid category.", 404)
 
-    db = get_db()
-    with db.cursor() as cursor:
+    conn = get_db()
+    with conn.cursor() as cursor:
         cursor.execute(
             """
             UPDATE expenses SET
-              category_id = %s, title = %s, amount = %s, expense_date = %s,
-              payment_method = %s, notes = %s
-            WHERE id = %s AND user_id = %s
+              category_id = ?, title = ?, amount = ?, expense_date = ?,
+              payment_method = ?, notes = ?
+            WHERE id = ? AND user_id = ?
             """,
             (
                 data["category_id"],
                 data["title"],
-                data["amount"],
+                float(data["amount"]),
                 data["expense_date"],
                 data["payment_method"],
                 data["notes"] or None,
@@ -696,7 +690,8 @@ def update_expense(expense_id: int):
                 session["user_id"],
             ),
         )
-    db.commit()
+    conn.commit()
+    conn.close()
     return jsonify(get_expense(expense_id, session["user_id"]))
 
 
@@ -707,13 +702,14 @@ def delete_expense(expense_id: int):
     if not existing:
         return api_error("Expense not found.", 404)
 
-    db = get_db()
-    with db.cursor() as cursor:
+    conn = get_db()
+    with conn.cursor() as cursor:
         cursor.execute(
-            "DELETE FROM expenses WHERE id = %s AND user_id = %s",
+            "DELETE FROM expenses WHERE id = ? AND user_id = ?",
             (expense_id, session["user_id"]),
         )
-    db.commit()
+    conn.commit()
+    conn.close()
     return jsonify({"message": "Expense deleted."})
 
 
@@ -742,7 +738,7 @@ def dashboard():
                COUNT(*) AS transaction_count,
                COALESCE(AVG(amount), 0) AS average_expense
         FROM expenses
-        WHERE user_id = %s AND expense_date >= %s AND expense_date < %s
+        WHERE user_id = ? AND expense_date >= ? AND expense_date < ?
         """,
         (user_id, start, end),
     )
@@ -750,12 +746,12 @@ def dashboard():
         """
         SELECT COALESCE(SUM(amount), 0) AS total_spent
         FROM expenses
-        WHERE user_id = %s AND expense_date >= %s AND expense_date < %s
+        WHERE user_id = ? AND expense_date >= ? AND expense_date < ?
         """,
         (user_id, previous_start, previous_end),
     )
     budget_row = fetch_one(
-        "SELECT amount FROM budgets WHERE user_id = %s AND month = %s",
+        "SELECT amount FROM budgets WHERE user_id = ? AND month = ?",
         (user_id, month),
     )
 
@@ -779,8 +775,8 @@ def dashboard():
         FROM categories c
         LEFT JOIN expenses e ON e.category_id = c.id
           AND e.user_id = c.user_id
-          AND e.expense_date >= %s AND e.expense_date < %s
-        WHERE c.user_id = %s
+          AND e.expense_date >= ? AND e.expense_date < ?
+        WHERE c.user_id = ?
         GROUP BY c.id, c.name, c.color, c.icon
         ORDER BY total DESC, c.name ASC
         """,
@@ -794,7 +790,7 @@ def dashboard():
         """
         SELECT expense_date, SUM(amount) AS total
         FROM expenses
-        WHERE user_id = %s AND expense_date >= %s AND expense_date < %s
+        WHERE user_id = ? AND expense_date >= ? AND expense_date < ?
         GROUP BY expense_date
         """,
         (user_id, start, end),
@@ -817,11 +813,11 @@ def dashboard():
     trend_start = date(trend_start_year, trend_start_month, 1)
     trend_rows = fetch_all(
         """
-        SELECT DATE_FORMAT(expense_date, '%%Y-%%m') AS month,
+        SELECT strftime('%Y-%m', expense_date) AS month,
                SUM(amount) AS total
         FROM expenses
-        WHERE user_id = %s AND expense_date >= %s AND expense_date < %s
-        GROUP BY DATE_FORMAT(expense_date, '%%Y-%%m')
+        WHERE user_id = ? AND expense_date >= ? AND expense_date < ?
+        GROUP BY strftime('%Y-%m', expense_date)
         """,
         (user_id, trend_start, end),
     )
@@ -841,7 +837,7 @@ def dashboard():
     recent = fetch_all(
         expense_select()
         + """
-        WHERE e.user_id = %s
+        WHERE e.user_id = ?
         ORDER BY e.expense_date DESC, e.id DESC
         LIMIT 5
         """,
@@ -880,8 +876,8 @@ def list_budgets():
                COALESCE(SUM(e.amount), 0) AS spent
         FROM budgets b
         LEFT JOIN expenses e ON e.user_id = b.user_id
-          AND DATE_FORMAT(e.expense_date, '%%Y-%%m') = b.month
-        WHERE b.user_id = %s
+          AND strftime('%Y-%m', e.expense_date) = b.month
+        WHERE b.user_id = ?
         GROUP BY b.id, b.month, b.amount
         ORDER BY b.month DESC
         LIMIT 12
@@ -916,17 +912,18 @@ def save_budget():
     except (ValueError, InvalidOperation) as exc:
         return api_error(str(exc))
 
-    db = get_db()
-    with db.cursor() as cursor:
+    conn = get_db()
+    with conn.cursor() as cursor:
         cursor.execute(
             """
             INSERT INTO budgets (user_id, month, amount)
-            VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE amount = VALUES(amount)
+            VALUES (?, ?, ?)
+            ON CONFLICT(user_id, month) DO UPDATE SET amount = excluded.amount
             """,
-            (session["user_id"], month, amount),
+            (session["user_id"], month, float(amount)),
         )
-    db.commit()
+    conn.commit()
+    conn.close()
     return jsonify({"month": month, "amount": float(amount)})
 
 
@@ -970,16 +967,12 @@ def add_security_headers(response):
     return response
 
 
-@app.errorhandler(pymysql.MySQLError)
+@app.errorhandler(Exception)
 def handle_database_error(error):
-    app.logger.exception("Database error: %s", error)
+    app.logger.exception("Error: %s", error)
     if request.path.startswith("/api/"):
-        return api_error(
-            "The database is unavailable. Check your MySQL settings and run "
-            "`python init_db.py`.",
-            503,
-        )
-    return "Database unavailable. Check the server logs.", 503
+        return jsonify({"message": "Server error. Please try again later."}), 500
+    return "Server error.", 500
 
 
 @app.errorhandler(404)
@@ -999,25 +992,22 @@ def handle_server_error(_error):
 
 
 # ---------------------------------------------------------------------------
-# Auto-initialize database on startup (for Render free plan without Shell)
+# Auto-initialize database on startup (for Render free plan)
 # ---------------------------------------------------------------------------
 
 
 def init_database_on_startup():
     """Create database, tables, admin account and default categories if missing."""
-    from pymysql.constants import CLIENT
-
     # Read schema
     sql_path = BASE_DIR / "db.sql"
-    sql = sql_path.read_text(encoding="utf-8")
+    if sql_path.exists():
+        sql = sql_path.read_text(encoding="utf-8")
+    else:
+        sql = ""
 
-    # Create database and tables (no database selected yet)
-    conn = connect(include_database=False, client_flag=CLIENT.MULTI_STATEMENTS)
+    conn = connect()
     try:
-        with conn.cursor() as cursor:
-            cursor.execute(sql)
-            while cursor.nextset():
-                pass
+        conn.executescript(sql)
         conn.commit()
     finally:
         conn.close()
@@ -1026,19 +1016,19 @@ def init_database_on_startup():
     conn = connect()
     try:
         with conn.cursor() as cursor:
-            cursor.execute("SHOW TABLES LIKE 'users'")
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
             if not cursor.fetchone():
-                return  # Tables not created yet
+                return
 
             admin_email = os.getenv("ADMIN_EMAIL", "admin@spendly.local").strip().lower()
             admin_name = os.getenv("ADMIN_NAME", "Admin").strip() or "Admin"
             admin_password = os.getenv("ADMIN_PASSWORD", "Admin@123")
 
-            cursor.execute("SELECT id FROM users WHERE email = %s", (admin_email,))
+            cursor.execute("SELECT id FROM users WHERE email = ?", (admin_email,))
             row = cursor.fetchone()
             if not row:
                 cursor.execute(
-                    "INSERT INTO users (name, email, password_hash) VALUES (%s, %s, %s)",
+                    "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
                     (admin_name, admin_email, generate_password_hash(admin_password)),
                 )
                 user_id = cursor.lastrowid
@@ -1047,9 +1037,8 @@ def init_database_on_startup():
                 user_id = row["id"]
                 print(f"Admin account already exists: {admin_email}")
 
-            # Seed default categories if empty
             cursor.execute(
-                "SELECT COUNT(*) AS count FROM categories WHERE user_id = %s",
+                "SELECT COUNT(*) AS count FROM categories WHERE user_id = ?",
                 (user_id,),
             )
             if cursor.fetchone()["count"] == 0:
@@ -1066,9 +1055,7 @@ try:
     init_database_on_startup()
 except Exception as e:
     app.logger.warning(f"Database auto-init failed: {e}")
-    app.logger.warning(
-        "App will start, but DB endpoints may fail until tables exist."
-    )
+    app.logger.warning("App will start, but DB endpoints may fail until tables exist.")
 
 
 if __name__ == "__main__":
