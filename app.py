@@ -1062,7 +1062,13 @@ def init_database_on_startup():
 
 
 # Run init on every startup (idempotent — safe to repeat)
-init_database_on_startup()
+try:
+    init_database_on_startup()
+except Exception as e:
+    app.logger.warning(f"Database auto-init failed: {e}")
+    app.logger.warning(
+        "App will start, but DB endpoints may fail until tables exist."
+    )
 
 
 if __name__ == "__main__":

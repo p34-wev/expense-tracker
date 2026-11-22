@@ -24,7 +24,7 @@ def db_settings() -> dict:
         "charset": "utf8mb4",
         "cursorclass": DictCursor,
         "autocommit": False,
-        "connect_timeout": 10,
+        "connect_timeout": 30,
     }
 
     if os.getenv("DB_SSL", "false").strip().lower() == "true":
