@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from db import _convert
+
 DEFAULT_CATEGORIES = [
     ("Food & Dining", "#f97316", "🍔"),
     ("Transport", "#3b82f6", "🚗"),
@@ -17,11 +19,13 @@ DEFAULT_CATEGORIES = [
 
 def seed_default_categories(cursor, user_id: int) -> None:
     """Insert the starter categories for a user, ignoring duplicates."""
-    cursor.executemany(
+    sql, params = _convert(
         """
         INSERT INTO categories (user_id, name, color, icon)
-        VALUES (%s, %s, %s, %s)
-        ON DUPLICATE KEY UPDATE name = VALUES(name)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(user_id, name) DO UPDATE SET name = excluded.name
         """,
-        [(user_id, name, color, icon) for name, color, icon in DEFAULT_CATEGORIES],
+        (),
     )
+    rows = [(user_id, name, color, icon) for name, color, icon in DEFAULT_CATEGORIES]
+    cursor.executemany(sql, rows)
