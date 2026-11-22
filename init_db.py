@@ -21,6 +21,7 @@ def run_schema() -> None:
         name VARCHAR(80) NOT NULL,
         email VARCHAR(254) NOT NULL UNIQUE,
         password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(20) NOT NULL DEFAULT 'admin',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
 

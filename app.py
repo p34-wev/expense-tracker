@@ -223,9 +223,6 @@ def login():
     if not row or not check_password_hash(row["password_hash"], password):
         return api_error("Invalid email or password.", 401)
 
-    if row["role"] != "admin":
-        return api_error("Admin access only", 403)
-
     session.clear()
     session.permanent = True
     session["user_id"] = row["id"]
