@@ -15,6 +15,35 @@ load_dotenv(BASE_DIR / ".env")
 DB_PATH = BASE_DIR / "expense_tracker.db"
 
 
+class _CursorWrapper:
+    """Wrap a sqlite3 cursor so it supports the context manager protocol."""
+
+    def __init__(self, cursor):
+        self._cursor = cursor
+
+    def __enter__(self):
+        return self._cursor
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        return False
+
+    def __getattr__(self, name):
+        return getattr(self._cursor, name)
+
+
+class _ConnectionWrapper:
+    """Wrap a sqlite3 connection so cursor() returns a context-manager cursor."""
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    def cursor(self):
+        return _CursorWrapper(self._conn.cursor())
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
 def connect(*, autocommit: bool = False):
     """Create a new SQLite connection."""
     conn = sqlite3.connect(str(DB_PATH))
@@ -22,7 +51,7 @@ def connect(*, autocommit: bool = False):
     conn.execute("PRAGMA foreign_keys = ON")
     if autocommit:
         conn.isolation_level = None
-    return conn
+    return _ConnectionWrapper(conn)
 
 
 def _convert(sql: str, params: tuple):

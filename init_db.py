@@ -77,28 +77,28 @@ def ensure_admin() -> int | None:
 
     conn = connect()
     try:
-        with conn.cursor() as cursor:
-            cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
-            row = cursor.fetchone()
-            if row:
-                user_id = row["id"]
-                print(f"Admin account already exists: {email}")
-            else:
-                cursor.execute(
-                    "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-                    (name, email, generate_password_hash(password)),
-                )
-                user_id = cursor.lastrowid
-                seed_default_categories(cursor, user_id)
-                print(f"Created admin account: {email}")
-
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
+        row = cursor.fetchone()
+        if row:
+            user_id = row["id"]
+            print(f"Admin account already exists: {email}")
+        else:
             cursor.execute(
-                "SELECT COUNT(*) AS count FROM categories WHERE user_id = ?",
-                (user_id,),
+                "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+                (name, email, generate_password_hash(password)),
             )
-            if cursor.fetchone()["count"] == 0:
-                seed_default_categories(cursor, user_id)
-                print("Added starter categories.")
+            user_id = cursor.lastrowid
+            seed_default_categories(cursor, user_id)
+            print(f"Created admin account: {email}")
+
+        cursor.execute(
+            "SELECT COUNT(*) AS count FROM categories WHERE user_id = ?",
+            (user_id,),
+        )
+        if cursor.fetchone()["count"] == 0:
+            seed_default_categories(cursor, user_id)
+            print("Added starter categories.")
 
         conn.commit()
         return user_id
