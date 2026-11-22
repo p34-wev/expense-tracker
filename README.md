@@ -1,19 +1,31 @@
-# 💰 Expense Tracker
+<!--
+=============================================================================
+                    💰 EXPENSE TRACKER - README
+=============================================================================
+-->
 
-> A beautiful, full-stack expense tracker built with **HTML, CSS, JavaScript, Python (Flask)** and **SQLite**.
+<h1 align="center">💰 Expense Tracker</h1>
 
-![GitHub repo size](https://img.shields.io/github/repo-size/p34-wev/expense-tracker)
-![GitHub last commit](https://img.shields.io/github/last-commit/p34-wev/expense-tracker)
-![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
-![Flask](https://img.shields.io/badge/Flask-3.1-lightgrey.svg)
-![SQLite](https://img.shields.io/badge/Database-SQLite-green.svg)
-![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+<p align="center">
+  <b>A beautiful, full-stack expense tracker</b> built with ❤️ using HTML, CSS, JavaScript, Python (Flask) and SQLite.
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python&logoColor=white"/>
+  <img src="https://img.shields.io/badge/Flask-3.1-000000?style=for-the-badge&logo=flask&logoColor=white"/>
+  <img src="https://img.shields.io/badge/SQLite-006064?style=for-the-badge&logo=sqlite&logoColor=white"/>
+  <img src="https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white"/>
+  <img src="https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white"/>
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black"/>
+  <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge"/>
+</p>
 
 ---
 
 ## 🌐 Live Demo
 
-> **Try it now:** [https://expense-tracker-8zpe.onrender.com](https://expense-tracker-8zpe.onrender.com)
+> **Try it now:**  
+🔗 **[https://expense-tracker-8zpe.onrender.com](https://expense-tracker-8zpe.onrender.com)**
 
 | | |
 |:---|:---|
@@ -24,39 +36,39 @@
 
 ## 📸 Preview
 
-| Login Page | Dashboard | Add Expense |
-|------------|-----------|-------------|
-| 🔐 Clean sign-in | 📊 Spending charts | ➕ Quick entry |
-
-> 🌐 **Live Demo:** https://expense-tracker-8zpe.onrender.com
+<p align="center">
+  <b>🔐 Login Page</b> • <b>📊 Dashboard</b> • <b>💸 Add Expense</b> • <b>🎯 Budget Tracker</b>
+</p>
 
 ---
 
 ## ✨ Features
 
-- 🔐 **User Authentication** — Sign up, login, session-based access
-- 📊 **Dashboard** — Monthly spending, average expense, budget progress
-- 📈 **Charts** — Daily spending trend, category breakdown (Canvas API)
-- 💸 **Expense Management** — Add, edit, delete transactions
-- 🗂️ **Categories** — Custom names, colors, and emoji icons
-- 🎯 **Budgets** — Set monthly limits, track spent vs remaining
-- 🔍 **Search & Filters** — By title, category, date range, sort order
-- 📄 **Pagination** — Easy navigation through expenses
-- 📱 **Responsive** — Works on mobile, tablet, and desktop
-- 💾 **SQLite Database** — Zero external database setup
+| Feature | Description |
+|---------|-------------|
+| 🔐 **Auth System** | Sign up, login, and session-based authentication |
+| 📊 **Dashboard** | Monthly spending, average expense, and budget progress |
+| 📈 **Charts** | Daily spending trend & category breakdown (Canvas API) |
+| 💸 **Expenses** | Add, edit, and delete transactions with full validation |
+| 🗂️ **Categories** | Custom names, colors, and emoji icons |
+| 🎯 **Budgets** | Set monthly limits and track spent vs remaining |
+| 🔍 **Search & Filter** | By title, category, date range, and sort order |
+| 📄 **Pagination** | Easy navigation through expense history |
+| 📱 **Responsive** | Works smoothly on mobile, tablet, and desktop |
+| 💾 **SQLite** | Zero external database setup — file-based |
 
 ---
 
 ## 🚀 Quick Start
 
-### 1️⃣ Clone the repository
+### 1️⃣ Clone the Repository
 
 ```bash
 git clone https://github.com/p34-wev/expense-tracker.git
 cd expense-tracker
 ```
 
-### 2️⃣ Create virtual environment
+### 2️⃣ Create Virtual Environment
 
 **Windows:**
 ```powershell
@@ -64,28 +76,26 @@ python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 ```
 
-**Mac/Linux:**
+**macOS / Linux:**
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3️⃣ Install dependencies
+### 3️⃣ Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4️⃣ Configure environment
+### 4️⃣ Configure Environment
 
-Copy `.env.example` to `.env`:
+Copy `.env.example` to `.env` and edit:
 
 ```powershell
 # Windows
 copy .env.example .env
 ```
-
-Edit `.env` with your settings:
 
 ```env
 PORT=5000
@@ -95,39 +105,25 @@ SESSION_SECRET=your_random_secret_key_here
 ADMIN_NAME=Admin
 ADMIN_EMAIL=admin@spendly.local
 ADMIN_PASSWORD=Admin@123
-SEED_DEMO_DATA=false
 
 APP_NAME=Expense Tracker
 CURRENCY_CODE=INR
 CURRENCY_LOCALE=en-IN
 ```
 
-### 5️⃣ Initialize the database
+### 5️⃣ Initialize Database
 
 ```bash
 python init_db.py
 ```
 
-This creates the SQLite database, admin account, and starter categories automatically.
-
-### 6️⃣ Start the app
+### 6️⃣ Run the App
 
 ```bash
 python app.py
 ```
 
 Open your browser: **http://localhost:5000**
-
----
-
-## 🔐 Default Login
-
-| Field | Value |
-|-------|-------|
-| Email | `admin@spendly.local` |
-| Password | `Admin@123` |
-
-⚠️ Change the password after your first login!
 
 ---
 
@@ -160,6 +156,17 @@ expense-tracker/
 
 ---
 
+## 🔐 Default Login
+
+| Field | Value |
+|-------|-------|
+| **Email** | `admin@spendly.local` |
+| **Password** | `Admin@123` |
+
+⚠️ **Change the password after your first login!**
+
+---
+
 ## 🌐 Deploy on Render (Free)
 
 ### Option A: Blueprint (Recommended)
@@ -188,7 +195,7 @@ expense-tracker/
 
 All endpoints require authentication (except auth routes).
 
-### Auth
+### 🔑 Auth
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -197,7 +204,7 @@ All endpoints require authentication (except auth routes).
 | `GET` | `/api/auth/me` | Get current user |
 | `POST` | `/api/auth/logout` | Sign out |
 
-### Expenses
+### 💸 Expenses
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -207,7 +214,7 @@ All endpoints require authentication (except auth routes).
 | `PUT` | `/api/expenses/:id` | Update expense |
 | `DELETE` | `/api/expenses/:id` | Delete expense |
 
-### Categories
+### 🗂️ Categories
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -216,14 +223,14 @@ All endpoints require authentication (except auth routes).
 | `PUT` | `/api/categories/:id` | Update category |
 | `DELETE` | `/api/categories/:id` | Delete category |
 
-### Budgets
+### 🎯 Budgets
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/api/budgets` | Budget history |
 | `PUT` | `/api/budget` | Save monthly budget |
 
-### Example: Add an expense
+### Example: Add an Expense
 
 ```bash
 curl -X POST http://localhost:5000/api/expenses \
@@ -285,4 +292,11 @@ This project is licensed under the **MIT License** — see [LICENSE](LICENSE) fo
 <div align="center">
   <b>Made with ❤️ for better expense management</b><br>
   ⭐ Star this repo if you found it useful!
+</p>
 </div>
+
+---
+
+<p align="center">
+  <img src="https://komarev.com/ghoc?v=p34-wev&label=Profile%20views&color=0e75b6&style=flat" alt="Profile views" />
+</p>
