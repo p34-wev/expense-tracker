@@ -37,6 +37,13 @@ class _ConnectionWrapper:
     def __init__(self, conn):
         self._conn = conn
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._conn.close()
+        return False
+
     def cursor(self):
         return _CursorWrapper(self._conn.cursor())
 
