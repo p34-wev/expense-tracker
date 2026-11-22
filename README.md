@@ -11,6 +11,17 @@
 
 ---
 
+## 🌐 Live Demo
+
+> **Try it now:** [https://expense-tracker-8zpe.onrender.com](https://expense-tracker-8zpe.onrender.com)
+
+| | |
+|:---|:---|
+| **Email:** | `admin@spendly.local` |
+| **Password:** | `Admin@123` |
+
+---
+
 ## 📸 Preview
 
 | Login Page | Dashboard | Add Expense |
