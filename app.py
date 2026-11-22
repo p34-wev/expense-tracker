@@ -1012,7 +1012,7 @@ def init_database_on_startup():
     # Ensure admin user and default categories
     conn = connect()
     try:
-        with conn.cursor() as cursor:
+        cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
         if not cursor.fetchone():
             return
