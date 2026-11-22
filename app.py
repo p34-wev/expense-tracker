@@ -1012,37 +1012,38 @@ def init_database_on_startup():
     # Ensure admin user and default categories
     conn = connect()
     try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
-        if not cursor.fetchone():
-            return
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+            if not cursor.fetchone():
+                conn.close()
+                return
 
-        admin_email = os.getenv("ADMIN_EMAIL", "admin@spendly.local").strip().lower()
-        admin_name = os.getenv("ADMIN_NAME", "Admin").strip() or "Admin"
-        admin_password = os.getenv("ADMIN_PASSWORD", "Admin@123")
+            admin_email = os.getenv("ADMIN_EMAIL", "admin@spendly.local").strip().lower()
+            admin_name = os.getenv("ADMIN_NAME", "Admin").strip() or "Admin"
+            admin_password = os.getenv("ADMIN_PASSWORD", "Admin@123")
 
-        cursor.execute("SELECT id FROM users WHERE email = ?", (admin_email,))
-        row = cursor.fetchone()
-        if not row:
+            cursor.execute("SELECT id FROM users WHERE email = ?", (admin_email,))
+            row = cursor.fetchone()
+            if not row:
+                cursor.execute(
+                    "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
+                    (admin_name, admin_email, generate_password_hash(admin_password)),
+                )
+                user_id = cursor.lastrowid
+                print(f"Created admin account: {admin_email}")
+            else:
+                user_id = row["id"]
+                print(f"Admin account already exists: {admin_email}")
+
             cursor.execute(
-                "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)",
-                (admin_name, admin_email, generate_password_hash(admin_password)),
+                "SELECT COUNT(*) AS count FROM categories WHERE user_id = ?",
+                (user_id,),
             )
-            user_id = cursor.lastrowid
-            print(f"Created admin account: {admin_email}")
-        else:
-            user_id = row["id"]
-            print(f"Admin account already exists: {admin_email}")
+            if cursor.fetchone()["count"] == 0:
+                seed_default_categories(cursor, user_id)
+                print("Added starter categories.")
 
-        cursor.execute(
-            "SELECT COUNT(*) AS count FROM categories WHERE user_id = ?",
-            (user_id,),
-        )
-        if cursor.fetchone()["count"] == 0:
-            seed_default_categories(cursor, user_id)
-            print("Added starter categories.")
-
-        conn.commit()
+            conn.commit()
     finally:
         conn.close()
 

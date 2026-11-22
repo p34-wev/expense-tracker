@@ -68,28 +68,34 @@ def _convert(sql: str, params: tuple):
 
 def fetch_one(sql: str, params=()) -> Optional[dict]:
     sql, params = _convert(sql, params)
-    with connect() as conn:
-        with conn:
-            cursor = conn.execute(sql, params)
-            row = cursor.fetchone()
-            return dict(row) if row else None
+    conn = connect()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        row = cursor.fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
 
 
 def fetch_all(sql: str, params=()) -> list[dict]:
     sql, params = _convert(sql, params)
-    with connect() as conn:
-        with conn:
-            cursor = conn.execute(sql, params)
-            return [dict(row) for row in cursor.fetchall()]
+    conn = connect()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        return [dict(row) for row in cursor.fetchall()]
+    finally:
+        conn.close()
 
 
 def execute(sql: str, params=()):
     sql, params = _convert(sql, params)
     conn = connect()
     try:
-        with conn:
-            cursor = conn.execute(sql, params)
-            return cursor
+        cursor = conn.cursor()
+        cursor.execute(sql, params)
+        return cursor
     finally:
         conn.close()
 
